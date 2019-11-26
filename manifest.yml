@@ -1,5 +1,6 @@
 ---
 applications:
-- name: xxxxx
+- name: yh-hotels-review
+  host: yh-hotels-review
   instances: 1
   memory: 256M
