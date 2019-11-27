@@ -45,6 +45,13 @@ var toneAnalyzer = new watson.ToneAnalyzerV3({
   version_date: '2016-05-19'
 });
 
+// Create the personalityInsights object
+var personalityInsights = new watson.PersonalityInsightsV3({
+  username: serviceCredentials.personality.username,
+  password: serviceCredentials.personality.password,
+  version_date: '2017-10-13'
+});
+
 
 // start server on the specified port and binding host
 server.listen(appEnv.port, '0.0.0.0', function() {
@@ -240,6 +247,33 @@ chosenHotel = chosenHotel.replace(/"/g,"").replace(/_/g," ").replace(/\b\w/g, l 
                 
 });
 
+                personalityInsights.profile({
+      "text": text,
+      "consumption_preferences": true
+    }, function(err, response) {
+ 
+      if (err) {
+        console.log(err);
+      } else {
+ getPersonalityTraits(response, function(personality, preference) {
+ 
+  io.emit('chat message', "--- Personality traits include: ");
+ 
+  for(i=0;i&lt;personality.length;i++) {
+    io.emit('chat message', "--- --- "+personality[i].trait+" has a score of "+personality[i].score.toFixed(2)+" and shows traits of "+personality[i].child.name+".");
+  };
+ 
+  io.emit('chat message', "--- Identified consumption preference: ");
+  io.emit('chat message', "--- --- "+preference);
+ 
+ 
+});
+
+ 
+ 
+      }
+    });
+
                reviews and "+negativeRevs+" negative reviews.");
  
               });
@@ -326,3 +360,44 @@ function getReviewText(hotel, callback) {
     });
 }
 
+function getPersonalityTraits(response, callback) {
+  // Function that parses response from personality insights 
+ 
+  var big5 = [];
+  var traitScore;
+ 
+  for (i=0;i&lt;response.personality.length;i++){
+    var highestChildScore = 0;
+    var traitScore = response.personality[i].percentile;
+ 
+    for (x=0;x &lt;response.personality[i].children.length;x++){
+      var currentChildScore = response.personality[i].children[x].percentile;
+      if (currentChildScore &gt; highestChildScore) {
+        highestChildScore = currentChildScore;
+        big5[i] = {
+          trait: response.personality[i].name,
+          score: traitScore,
+          child: response.personality[i].children[x]
+        }
+      }
+    }
+  }
+  for(i=0;i &lt; big5.length;i++) {
+    console.log(big5[i].trait);
+    console.log(big5[i].score);
+    console.log(big5[i].child.name);
+  }
+  console.log(big5);
+  var consumptionPrefs = [];
+ 
+  for (i=0;i&lt;response.consumption_preferences[0].consumption_preferences.length;i++) {
+    if(response.consumption_preferences[0].consumption_preferences[i].score == 1) {
+      consumptionPrefs.push(response.consumption_preferences[0].consumption_preferences[i].name);
+    }
+  }
+  for(i=0;i&lt;consumptionPrefs.length;i++) {
+    console.log(consumptionPrefs[i]);
+  }
+  var preference = consumptionPrefs[Math.floor(Math.random() * consumptionPrefs.length)];
+  callback(big5, preference);
+}
